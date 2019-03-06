@@ -13,8 +13,10 @@
 #include <eigen3/Eigen/Eigen>
 #include "std_msgs/Int16.h"
 #include <qb_interface/adcSensorArray.h>
-#include <qb_interface/handRef.h>
+//#include <qb_interface/handRef.h>
 #include <stdlib.h>
+#include <trajectory_msgs/JointTrajectory.h>
+
 
 using namespace std;
 
@@ -56,6 +58,8 @@ ros::Time feedback_activation;
 ros::Time exp_begin;
 ros::Duration pressure_latency(1.5);
 ros::Duration exp_finish(10);
+
+trajectory_msgs::JointTrajectory hand_cl_msg;
 
 /*---------------------------------------------------------------------*
 * GET CHAR FROM KEYBOARD                                               *
@@ -272,16 +276,17 @@ int main(int argc, char **argv)
     std_msgs::Int16 flag_msg;
     std_msgs::Int16 flag_pressure_msg;
     std_msgs::Int16 k_stiff_msg;
-    qb_interface::handRef hand_cl_msg;
+    //qb_interface::handRef hand_cl_msg;
     geometry_msgs::Twist vel_des_msg;
     geometry_msgs::PoseStamped posa_control_msg;
     ros::Time time_exp_msg;
 
-    ros::Publisher pub_control_ee         = node.advertise<geometry_msgs::PoseStamped>("Franka_RIGHT/equilibrium_pose",1); // Aggiungere topic
-    ros::Publisher stiffMatrixCmdPub      = node.advertise<std_msgs::Float64MultiArray>("Franka_RIGHT/desired_stiffness_matrix",1);
+    ros::Publisher pub_control_ee         = node.advertise<geometry_msgs::PoseStamped>("/panda_arm/equilibrium_pose",1); // Aggiungere topic
+    ros::Publisher stiffMatrixCmdPub      = node.advertise<std_msgs::Float64MultiArray>("/panda_arm/desired_stiffness_matrix",1);
     ros::Publisher flagPub                = node.advertise<std_msgs::Int16>("handshake_feedback_flag_activation",1);
     ros::Publisher pub_pos_desD_ee        = node.advertise<geometry_msgs::Twist>("/handshake_EKF_desired_twist",1);
-    ros::Publisher pub_hand_cl            = node.advertise<qb_interface::handRef>("/qb_class/hand_ref",1);
+    //ros::Publisher pub_hand_cl            = node.advertise<qb_interface::handRef>("/qb_class/hand_ref",1);
+    ros::Publisher pub_hand_cl            = node.advertise<trajectory_msgs::JointTrajectory>("/right_hand/joint_trajectory_controller/command",1);
     ros::Publisher pressure_feedback_pub  = node.advertise<std_msgs::Int16>("handshake_pressure_feedback_activation",1);
     ros::Publisher arm_stiffness_pub      = node.advertise<std_msgs::Int16>("handshake_current_arm_stiffness",1);
     ros::Publisher subject_ID_pub         = node.advertise<std_msgs::Int16>("handshake_subject_ID",1);
@@ -291,7 +296,9 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
     ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
-    ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback);
+
+    //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Handshake_Callback); 
+    //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Arm_Stiffness_Callback);   
          
     while (ros::ok()){
 
@@ -311,6 +318,8 @@ int main(int argc, char **argv)
       }
 
 
+    // EKF feedback on ee z position
+      
     if (control_type == 1 || control_type == 3 || control_type == 5 && flag == 1 && flag_pressure == 1){
      
      z_des_ctr = pos_hat_z;
@@ -326,6 +335,7 @@ int main(int argc, char **argv)
 
     }
 
+
     vel_des_msg.linear.z = zd_des_ctr;
 
     if (z_des_ctr < 0.1)
@@ -333,6 +343,8 @@ int main(int argc, char **argv)
 
     if (z_des_ctr > 0.9)
       z_des_ctr = 0.9;
+
+    //vel_des_msg.linear.z = EKF_feedback(control_type, );
 
     posa_control_msg.pose.position.x    = pos_hat_x;
     posa_control_msg.pose.position.y    = pos_hat_y;
@@ -367,8 +379,24 @@ int main(int argc, char **argv)
     flag_msg.data = flag;
     flagPub.publish(flag_msg);
 
-    hand_cl_msg.closure.clear();
-    hand_cl_msg.closure.push_back(hand_cl);
+    // hand_cl_msg.closure.clear();
+    // hand_cl_msg.closure.push_back(hand_cl);
+    // pub_hand_cl.publish(hand_cl_msg);
+    
+    // Creating traj msg for hand controller
+    hand_cl_msg.points.clear();
+    hand_cl_msg.joint_names.clear();
+    hand_cl_msg.joint_names.push_back("right_hand_synergy_joint");
+
+    trajectory_msgs::JointTrajectoryPoint start_point;
+    start_point.time_from_start = ros::Duration(1.0/50.0);
+
+    start_point.positions.clear();
+    start_point.positions.push_back(hand_cl);
+
+    hand_cl_msg.points.push_back(start_point);
+
+    // Publishing to hand controller
     pub_hand_cl.publish(hand_cl_msg);
         
     flag_pressure_msg.data = flag_pressure;
@@ -386,8 +414,24 @@ int main(int argc, char **argv)
 
     if (exp_begin + exp_finish <= ros::Time::now()){
 
-      hand_cl_msg.closure.clear();
-      hand_cl_msg.closure.push_back(0.0);
+      // hand_cl_msg.closure.clear();
+      // hand_cl_msg.closure.push_back(0.0);
+      // pub_hand_cl.publish(hand_cl_msg);
+
+      // Creating traj msg for hand controller
+      hand_cl_msg.points.clear();
+      hand_cl_msg.joint_names.clear();
+      hand_cl_msg.joint_names.push_back("right_hand_synergy_joint");
+
+      trajectory_msgs::JointTrajectoryPoint start_point;
+      start_point.time_from_start = ros::Duration(1.0/50.0);
+
+      start_point.positions.clear();
+      start_point.positions.push_back(0.0);
+
+      hand_cl_msg.points.push_back(start_point);
+
+      // Publishing to hand controller
       pub_hand_cl.publish(hand_cl_msg);
 
       ros::Duration(1).sleep();  // per dare tempo ai publisher di avviarsi
