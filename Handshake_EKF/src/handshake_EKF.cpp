@@ -138,10 +138,10 @@ int main(int argc, char **argv){
     ros:: Publisher pub_contrD = node.advertise<geometry_msgs::Twist>("/handshake_EKF_controlled_twist",100);
    
     // Da modificare il topic
-    ros::Subscriber sub_pos_ee = node.subscribe("/Franka_RIGHT/franka_ee_pose",1,&poseCallback);
-    ros::Subscriber sub_pos_des_ee = node.subscribe("/Franka_RIGHT/equilibrium_pose",1,&pose_desCallback);
+    ros::Subscriber sub_pos_ee = node.subscribe("/panda_arm/franka_ee_pose",1,&poseCallback);
+    ros::Subscriber sub_pos_des_ee = node.subscribe("/panda_arm/equilibrium_pose",1,&pose_desCallback);
     ros::Subscriber sub_posD_des_ee = node.subscribe("/handshake_EKF_desired_twist",1,&poseD_desCallback);
-    ros::Subscriber sub_stiff_des_ee = node.subscribe("Franka_RIGHT/desired_stiffness_matrix",1,&stiff_desCallback);
+    ros::Subscriber sub_stiff_des_ee = node.subscribe("/panda_arm/desired_stiffness_matrix",1,&stiff_desCallback);
 
 
 	 // lwr_controllers::PoseRPY msg;
