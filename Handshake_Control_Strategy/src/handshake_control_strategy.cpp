@@ -35,8 +35,8 @@ double posD_hat       = 0.0;
 double k_stiff      = 100.0;
 double k_max        = 500.0;
 double k_min        = 100.0;
-double K_C          = 0.5;
-double K_P          = 1.2;
+double K_C          = 0.7;
+double K_P          = 1.5;
 double hand_cl      = 0;
 double hand_cl_max  = 19000.0;
 double hand_max     = 0.75*hand_cl_max;
@@ -46,7 +46,7 @@ double max_adc      = 3000.0;
 double pressure_sens_1_old  = 0.0;
 double pressure_sens_2_old  = 0.0;
 double hand_cl_old          = 0.0;
-double pres_th              = 200.0;
+double pres_th              = 100.0;
 
 int flag          = 1;
 int control_type  = 1;
@@ -94,7 +94,7 @@ double speedSaturation(double actual_value, double previous_value, double thresh
   if (abs(actual_value - previous_value) > threshold) {
 
     if (previous_value  > actual_value) {
-        actual_value = previous_value - threshold;
+        actual_value = previous_value - threshold/5;
     }
 
     if (previous_value  < actual_value) {
@@ -112,6 +112,8 @@ double speedSaturation(double actual_value, double previous_value, double thresh
   return actual_value;
 
 }
+
+
 
 /*---------------------------------------------------------------------*
 * FEEDBACK FOR HANDSHAKE (ARM STIFFNESS AND HAND CLOSURE               *
@@ -168,31 +170,33 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
     // Handshake control
     if (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th) {
 
-      if (flag_pressure == 0){
+      // if (flag_pressure == 0){
 
-        flag_pressure = 1;
-        feedback_activation = ros::Time::now();
-        std::cout << "Handshake detected!" << std::endl;
+      //   flag_pressure = 1;
+      //   feedback_activation = ros::Time::now();
+      //   std::cout << "Handshake detected!" << std::endl;
 
-      }
+      // }
 
       hand_cl = K_C*hand_max + K_P*hand_cl_max*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
       hand_cl = speedSaturation(hand_cl, hand_cl_old, cl_th);
+      //hand_cl = lowPassAveraging(hand_cl);
 
       if (hand_cl > hand_max) {
         hand_cl = hand_max;
         }
       }
 
-    if (flag_pressure == 1 && (feedback_activation + pressure_latency <= ros::Time::now())) {
+      else hand_cl = 0;
+    // if (flag_pressure == 1 && (feedback_activation + pressure_latency <= ros::Time::now())) {
 
-      flag_pressure = 0;
-      hand_cl       = 0;
+    //   flag_pressure = 0;
+    //   hand_cl       = 0;
 
-      std::cout << "Handshake lost..." << std::endl;
+    //   std::cout << "Handshake lost..." << std::endl;
 
-    }
+    // }
 
     pressure_sens_1_old = pressure_sens_1;
     pressure_sens_2_old = pressure_sens_2;
