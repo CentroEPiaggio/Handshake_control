@@ -176,7 +176,7 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
 
       // if (flag_pressure == 0){
 
-      //   flag_pressure = 1;
+       flag_pressure = 1;
       //   feedback_activation = ros::Time::now();
       //   std::cout << "Handshake detected!" << std::endl;
 
@@ -193,6 +193,10 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
       }
 
       else hand_cl = 0;
+      
+      flag_pressure = 0;
+
+
     // if (flag_pressure == 1 && (feedback_activation + pressure_latency <= ros::Time::now())) {
 
     //   flag_pressure = 0;
