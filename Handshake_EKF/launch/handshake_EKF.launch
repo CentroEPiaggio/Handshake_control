@@ -9,7 +9,7 @@
     <arg name="arg handshake_subject_ID" default="1"/>
     <arg name="arg handshake_subject_task" default="1"/>
 
-    <node name="handshake_EKF_node" pkg="handshake_EKF" type="handshake_EKF"  />
+    <node name="handshake_EKF_node" pkg="handshake_ekf" type="handshake_EKF"  />
 
     <group if="$(arg handshake_controller_enabled)">
             

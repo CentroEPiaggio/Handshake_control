@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(handshake_EKF)
+project(handshake_ekf)
 add_definitions(-std=gnu++11)
 
 ## Compile as C++11, supported in ROS Kinetic and newer

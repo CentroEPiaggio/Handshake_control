@@ -43,7 +43,8 @@
 
 #include <trajectory_msgs/JointTrajectory.h>
 #include <vector>
-#include <filter/StateVec.h>
+#include <handshake_ekf/StateVec.h>
+//#include <filter/StateVec.h>
 
 using namespace KDL;
 
@@ -131,7 +132,7 @@ int main(int argc, char **argv){
     r_quat = r_quat.normalized();
 
     //ros::Publisher pub = node.advertise<lwr_controllers::PoseRPY>("/right_arm/one_task_inverse_kinematics_controller/command",1000);
-    ros::Publisher Stato = node.advertise<filter::StateVec>("/handshake_EKF_state",10);
+    ros::Publisher Stato = node.advertise<handshake_ekf::StateVec>("/handshake_EKF_state",10);
     //ros:: Publisher pub_teleOp = node.advertise<geometry_msgs::Pose>("/right_arm/teleoperation_controller/command",100);
     ros:: Publisher pub_contr = node.advertise<geometry_msgs::Pose>("/handshake_EKF_controlled_pose",100);
     ros:: Publisher pub_contrD = node.advertise<geometry_msgs::Twist>("/handshake_EKF_controlled_twist",100);
@@ -175,7 +176,7 @@ int main(int argc, char **argv){
  
     // Alcune definizioni di variabili
 
-    double T_measure = 0.01; // ogno quanto arrivano le misure
+    double T_measure = 0.01; // ogni quanto arrivano le misure
 
     double z;
     double zd;
@@ -216,7 +217,7 @@ int main(int argc, char **argv){
 
 
    double z_uscita;
-   filter::StateVec stato_msg;
+   handshake_ekf::StateVec stato_msg;
    double time_filter = 0;
    double roll_base;
    double pitch_base;
