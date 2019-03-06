@@ -5,9 +5,9 @@
     <arg name="handshake_controller_enabled" default="true"/>
 <!--     <arg name="hand_controller_enabled" default="true"/>
  -->    <arg name="adc_board_enabled" default="true"/>
-    <arg name="arg handshake_controller_type" default="1"/>
-    <arg name="arg handshake_subject_ID" default="1"/>
-    <arg name="arg handshake_subject_task" default="1"/>
+    <arg name="handshake_controller_type" default="1"/>
+    <arg name="handshake_subject_ID" default="1"/>
+    <arg name="handshake_subject_task" default="1"/>
 
     <node name="handshake_EKF_node" pkg="handshake_ekf" type="handshake_EKF"  />
 
@@ -17,7 +17,7 @@
 
     </group>
 
-    <node name="handshake_record" pkg="rosbag" type="record" args="-a -o /home/domenico/Desktop/subj_$(arg handshake_subject_ID)_iter_$(arg handshake_subject_task)" output="screen"/>
+    <!-- <node name="handshake_record" pkg="rosbag" type="record" args="-a -o /home/domenico/Desktop/subj_$(arg handshake_subject_ID)_iter_$(arg handshake_subject_task)" output="screen"/> -->
 
 
     <!-- <group if="$(arg hand_controller_enabled)">
