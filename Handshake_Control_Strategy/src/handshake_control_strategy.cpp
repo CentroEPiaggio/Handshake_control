@@ -296,8 +296,8 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
     ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
+    ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback); 
 
-    //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Handshake_Callback); 
     //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Arm_Stiffness_Callback);   
          
     while (ros::ok()){
