@@ -202,6 +202,8 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
 
     // }
 
+    std::cout << "The hand cl in callback is " << hand_cl/19000 << "." << std::endl;
+
     pressure_sens_1_old = pressure_sens_1;
     pressure_sens_2_old = pressure_sens_2;
     hand_cl_old = hand_cl;
@@ -392,7 +394,9 @@ int main(int argc, char **argv)
     start_point.time_from_start = ros::Duration(1.0/50.0);
 
     start_point.positions.clear();
-    start_point.positions.push_back(hand_cl);
+    start_point.positions.push_back(hand_cl/19000);
+
+    std::cout << "The hand cl is " << hand_cl/19000 << "." << std::endl;
 
     hand_cl_msg.points.push_back(start_point);
 
