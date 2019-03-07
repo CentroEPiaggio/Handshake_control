@@ -470,6 +470,7 @@ int main(int argc, char **argv)
 
 
         service_called = false;
+        exp_begin = ros::Time::now();
 
       }
 
