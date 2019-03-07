@@ -238,6 +238,7 @@ void poseD_hatCallback(const geometry_msgs::Twist& msg)
 bool run_handshake_control(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res){
   // Setting the run bool
   service_called = req.data;
+  exp_begin = ros::Time::now();     // Resetting time for timeout
   res.success = true;
   res.message = "Done!";
   return true;
