@@ -58,7 +58,7 @@ ros::Time exp_time;
 ros::Time feedback_activation;
 ros::Time exp_begin;
 ros::Duration pressure_latency(1.5);
-ros::Duration exp_finish(60);
+ros::Duration exp_finish(180);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 bool service_called = false;
@@ -408,7 +408,7 @@ int main(int argc, char **argv)
       hand_cl_msg.joint_names.push_back("right_hand_synergy_joint");
 
       trajectory_msgs::JointTrajectoryPoint start_point;
-      start_point.time_from_start = ros::Duration(1.0/50.0);
+      start_point.time_from_start = ros::Duration(1.0/100.0);
 
       start_point.positions.clear();
       start_point.positions.push_back(hand_cl/19000);
@@ -449,7 +449,7 @@ int main(int argc, char **argv)
         hand_cl_msg.joint_names.push_back("right_hand_synergy_joint");
 
         trajectory_msgs::JointTrajectoryPoint start_point;
-        start_point.time_from_start = ros::Duration(1.0/50.0);
+        start_point.time_from_start = ros::Duration(1.0/100.0);
 
         start_point.positions.clear();
         start_point.positions.push_back(0.0);
@@ -460,7 +460,8 @@ int main(int argc, char **argv)
         pub_hand_cl.publish(hand_cl_msg);
 
         ros::Duration(1).sleep();  // per dare tempo ai publisher di avviarsi
-        ros::shutdown();
+        //ros::shutdown();
+        service_called = false;
 
       }
 
