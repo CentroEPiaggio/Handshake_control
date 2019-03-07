@@ -280,7 +280,7 @@ int main(int argc, char **argv)
     node.getParam("handshake_controller_type", control_type);
     std::cout << "Controller Type "<< control_type <<" Enabled" << std::endl;
 
-    ros::Rate rate(10);
+    ros::Rate rate(100);
     exp_begin = ros::Time::now();
 
     std_msgs::Float64MultiArray stiffMatrixCmdMsg;
@@ -308,7 +308,7 @@ int main(int argc, char **argv)
     ros::Publisher subject_task_pub       = node.advertise<std_msgs::Int16>("handshake_subject_task",1);
     ros::Publisher control_ID_pub         = node.advertise<std_msgs::Int16>("handshake_control_ID",1);
     ros::Publisher time_exp_pub           = node.advertise<std_msgs::Int16>("handshake_exp_time",1);
-    ros::Publisher end_pub                = node.advertise<std_msgs::Bool>("handshake_ending",1);
+    ros::ServiceClient end_pub            = node.serviceClient<std_srvs::SetBool>("handshake_ending");
 
     ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
     ros::topic::waitForMessage<geometry_msgs::Pose>("/handshake_EKF_controlled_pose", ros::Duration(5.0));
@@ -465,8 +465,8 @@ int main(int argc, char **argv)
         ros::Duration(1).sleep();  // per dare tempo ai publisher di avviarsi
         //ros::shutdown();
 
-        std_msgs::Bool end_msg; end_msg.data = true;
-        end_pub.publish(end_msg);
+        std_srvs::SetBool end_srv; end_srv.request.data = true;
+        end_pub.call(end_srv);
 
 
         service_called = false;
