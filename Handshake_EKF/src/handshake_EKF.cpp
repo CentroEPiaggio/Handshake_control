@@ -231,7 +231,7 @@ int main(int argc, char **argv){
   Eigen::Matrix<double,3,1> pos;
   Eigen::Matrix<double,3,1> orien;
 
-  double T_ant = 0.2; // T di anticipo per uscita filtro
+  double T_ant = 0.1; // T di anticipo per uscita filtro
 
 
 
