@@ -16,6 +16,7 @@
 //#include <qb_interface/handRef.h>
 #include <stdlib.h>
 #include <trajectory_msgs/JointTrajectory.h>
+#include <ros/console.h>
 
 
 using namespace std;
@@ -57,7 +58,7 @@ ros::Time exp_time;
 ros::Time feedback_activation;
 ros::Time exp_begin;
 ros::Duration pressure_latency(1.5);
-ros::Duration exp_finish(10);
+ros::Duration exp_finish(60);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 
@@ -193,18 +194,17 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
       }
 
       else hand_cl = 0;
-      
-      flag_pressure = 0;
-
 
     // if (flag_pressure == 1 && (feedback_activation + pressure_latency <= ros::Time::now())) {
 
-    //   flag_pressure = 0;
+    flag_pressure = 0;
     //   hand_cl       = 0;
 
     //   std::cout << "Handshake lost..." << std::endl;
 
     // }
+
+    // std::cout << "The hand cl in callback is " << hand_cl/19000 << "." << std::endl;
 
     pressure_sens_1_old = pressure_sens_1;
     pressure_sens_2_old = pressure_sens_2;
@@ -299,12 +299,15 @@ int main(int argc, char **argv)
     ros::Publisher time_exp_pub           = node.advertise<std_msgs::Int16>("handshake_exp_time",1);
 
     ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
+    ros::topic::waitForMessage<geometry_msgs::Pose>("/handshake_EKF_controlled_pose", ros::Duration(5.0));
     ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
     ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback); 
 
     //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Arm_Stiffness_Callback);   
          
     while (ros::ok()){
+      //Spinning once to get messages from topics
+      ros::spinOnce();
 
        
      if (kbhit()){
@@ -396,7 +399,9 @@ int main(int argc, char **argv)
     start_point.time_from_start = ros::Duration(1.0/50.0);
 
     start_point.positions.clear();
-    start_point.positions.push_back(hand_cl);
+    start_point.positions.push_back(hand_cl/19000);
+
+    // std::cout << "The hand cl is " << hand_cl/19000 << "." << std::endl;
 
     hand_cl_msg.points.push_back(start_point);
 
@@ -411,6 +416,10 @@ int main(int argc, char **argv)
 
     pub_pos_desD_ee.publish(vel_des_msg);
     pub_control_ee.publish(posa_control_msg);
+
+    // ROS_WARN_STREAM("Pose to publish \n" << posa_control_msg);
+    // int arc;
+    // std::cin >> arc;
 
     exp_time = ros::Time::now();
     time_exp_msg = exp_time;
