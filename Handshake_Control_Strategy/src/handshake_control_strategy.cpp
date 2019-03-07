@@ -60,7 +60,7 @@ ros::Time exp_time;
 ros::Time feedback_activation;
 ros::Time exp_begin;
 ros::Duration pressure_latency(1.5);
-ros::Duration exp_finish(60);
+ros::Duration exp_finish(30);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 bool service_called = false;
@@ -102,7 +102,7 @@ double speedSaturation(double actual_value, double previous_value, double thresh
   if (abs(actual_value - previous_value) > threshold) {
 
     if (previous_value  > actual_value) {
-        actual_value = previous_value - threshold/5;
+        actual_value = previous_value - threshold/2;
     }
 
     if (previous_value  < actual_value) {
@@ -472,6 +472,20 @@ int main(int argc, char **argv)
 
         service_called = false;
         exp_begin = ros::Time::now();
+
+        // Resetting stiffness matrix to minimum value
+        kMatrix = Eigen::MatrixXd::Zero(6,6);
+        kMatrix.topLeftCorner(3, 3)      = k_min * Eigen::MatrixXd::Identity(3, 3);
+        kMatrix.bottomRightCorner(3, 3)  = k_min * Eigen::MatrixXd::Identity(3, 3) / 20;
+
+        stiffMatrixCmdMsg.data.clear();
+
+        for (int j = 0; j < 36; j++)
+        {
+          stiffMatrixCmdMsg.data.push_back(kMatrix(j));
+        }
+
+        stiffMatrixCmdPub.publish(stiffMatrixCmdMsg);
 
       }
 
