@@ -180,7 +180,7 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
 
       // if (flag_pressure == 0){
 
-       flag_pressure = 1;
+      flag_pressure = 1;
       //   feedback_activation = ros::Time::now();
       //   std::cout << "Handshake detected!" << std::endl;
 
@@ -194,13 +194,15 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
       if (hand_cl > hand_max) {
         hand_cl = hand_max;
         }
-      }
+    }
 
-      else hand_cl = 0;
+    else {
+      hand_cl = 0;
 
     // if (flag_pressure == 1 && (feedback_activation + pressure_latency <= ros::Time::now())) {
 
-    flag_pressure = 0;
+      flag_pressure = 0;
+    }
     //   hand_cl       = 0;
 
     //   std::cout << "Handshake lost..." << std::endl;
@@ -343,14 +345,14 @@ int main(int argc, char **argv)
 
       // EKF feedback on ee z position
         
-        if (control_type == 1 || control_type == 3 || control_type == 5 && flag == 1 && flag_pressure == 1){
+        if ((control_type == 1 || control_type == 3 || control_type == 5) && flag == 1 && flag_pressure == 1){
 
          z_des_ctr = pos_hat_z;
          zd_des_ctr = 0; 
 
        }
 
-       else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0)
+       else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0 || flag_pressure == 0)
        {
 
          z_des_ctr = 0.3;    
