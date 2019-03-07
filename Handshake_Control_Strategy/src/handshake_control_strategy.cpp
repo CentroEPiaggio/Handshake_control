@@ -1,4 +1,3 @@
-#include <trajectory_msgs/JointTrajectory.h>
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/Float64MultiArray.h"
@@ -16,6 +15,7 @@
 //#include <qb_interface/handRef.h>
 #include <stdlib.h>
 #include <trajectory_msgs/JointTrajectory.h>
+#include <std_srvs/SetBool.h>
 #include <ros/console.h>
 
 
@@ -61,6 +61,7 @@ ros::Duration pressure_latency(1.5);
 ros::Duration exp_finish(60);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
+bool service_called = false;
 
 /*---------------------------------------------------------------------*
 * GET CHAR FROM KEYBOARD                                               *
@@ -232,6 +233,14 @@ void poseD_hatCallback(const geometry_msgs::Twist& msg)
   posD_hat = msg.linear.z;
 }
 
+bool run_handshake_control(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res){
+  // Setting the run bool
+  service_called = req.data;
+  res.success = true;
+  res.message = "Done!";
+  return true;
+}
+
 /*---------------------------------------------------------------------*
 * MAIN                                                                 *
 *                                                                      *
@@ -303,134 +312,96 @@ int main(int argc, char **argv)
     ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
     ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback); 
 
+    ros::ServiceServer run_client = node.advertiseService("call_handshake_control", run_handshake_control);
+
     //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Arm_Stiffness_Callback);   
          
     while (ros::ok()){
       //Spinning once to get messages from topics
       ros::spinOnce();
 
+      if (service_called) { 
        
-     if (kbhit()){
-        (void)getch();
+         if (kbhit()){
+          (void)getch();
 
-        if (flag == 1){
-          flag = 0;
-          std::cout << "Filter Feedback Not Enabled; press a key to enable it" << std::endl;
-        }
-        else {
-          flag = 1;
-          std::cout << "Filter Feedback Enabled, waiting for pressure signals; press a key to disable it" << std::endl;
+          if (flag == 1){
+            flag = 0;
+            std::cout << "Filter Feedback Not Enabled; press a key to enable it" << std::endl;
+          }
+          else {
+            flag = 1;
+            std::cout << "Filter Feedback Enabled, waiting for pressure signals; press a key to disable it" << std::endl;
 
+          }
         }
+
+
+      // EKF feedback on ee z position
+        
+        if (control_type == 1 || control_type == 3 || control_type == 5 && flag == 1 && flag_pressure == 1){
+
+         z_des_ctr = pos_hat_z;
+         zd_des_ctr = 0; 
+
+       }
+
+       else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0)
+       {
+
+         z_des_ctr = 0.3;    
+         zd_des_ctr = 0; 
+
+       }
+
+
+       vel_des_msg.linear.z = zd_des_ctr;
+
+       if (z_des_ctr < 0.1)
+        z_des_ctr = 0.1;
+
+      if (z_des_ctr > 0.9)
+        z_des_ctr = 0.9;
+
+      //vel_des_msg.linear.z = EKF_feedback(control_type, );
+
+      posa_control_msg.pose.position.x    = pos_hat_x;
+      posa_control_msg.pose.position.y    = pos_hat_y;
+      posa_control_msg.pose.position.z    = z_des_ctr;
+      posa_control_msg.pose.orientation.x = pos_hat_quat_x;
+      posa_control_msg.pose.orientation.y = pos_hat_quat_y;
+      posa_control_msg.pose.orientation.z = pos_hat_quat_z;
+      posa_control_msg.pose.orientation.w = pos_hat_quat_w;
+
+      kMatrix = Eigen::MatrixXd::Zero(6,6);
+      kMatrix.topLeftCorner(3, 3)      = k_stiff * Eigen::MatrixXd::Identity(3, 3);
+      kMatrix.bottomRightCorner(3, 3)  = k_stiff * Eigen::MatrixXd::Identity(3, 3) / 20;
+
+      stiffMatrixCmdMsg.data.clear();
+
+      for (int j = 0; j < 36; j++)
+      {
+        stiffMatrixCmdMsg.data.push_back(kMatrix(j));
       }
 
+      stiffMatrixCmdPub.publish(stiffMatrixCmdMsg);
 
-    // EKF feedback on ee z position
-      
-    if (control_type == 1 || control_type == 3 || control_type == 5 && flag == 1 && flag_pressure == 1){
-     
-     z_des_ctr = pos_hat_z;
-     zd_des_ctr = 0; 
+      control_ID_msg.data = control_type;
+      control_ID_pub.publish(control_ID_msg);
 
-    }
+      ID_msg.data = subject_ID;
+      subject_ID_pub.publish(ID_msg);
 
-    else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0)
-    {
+      task_msg.data = subject_task;
+      subject_task_pub.publish(task_msg);
 
-     z_des_ctr = 0.3;    
-     zd_des_ctr = 0; 
-
-    }
-
-
-    vel_des_msg.linear.z = zd_des_ctr;
-
-    if (z_des_ctr < 0.1)
-      z_des_ctr = 0.1;
-
-    if (z_des_ctr > 0.9)
-      z_des_ctr = 0.9;
-
-    //vel_des_msg.linear.z = EKF_feedback(control_type, );
-
-    posa_control_msg.pose.position.x    = pos_hat_x;
-    posa_control_msg.pose.position.y    = pos_hat_y;
-    posa_control_msg.pose.position.z    = z_des_ctr;
-    posa_control_msg.pose.orientation.x = pos_hat_quat_x;
-    posa_control_msg.pose.orientation.y = pos_hat_quat_y;
-    posa_control_msg.pose.orientation.z = pos_hat_quat_z;
-    posa_control_msg.pose.orientation.w = pos_hat_quat_w;
-
-    kMatrix = Eigen::MatrixXd::Zero(6,6);
-    kMatrix.topLeftCorner(3, 3)      = k_stiff * Eigen::MatrixXd::Identity(3, 3);
-    kMatrix.bottomRightCorner(3, 3)  = k_stiff * Eigen::MatrixXd::Identity(3, 3) / 20;
-
-    stiffMatrixCmdMsg.data.clear();
-
-    for (int j = 0; j < 36; j++)
-    {
-      stiffMatrixCmdMsg.data.push_back(kMatrix(j));
-    }
-
-    stiffMatrixCmdPub.publish(stiffMatrixCmdMsg);
-
-    control_ID_msg.data = control_type;
-    control_ID_pub.publish(control_ID_msg);
-
-    ID_msg.data = subject_ID;
-    subject_ID_pub.publish(ID_msg);
-
-    task_msg.data = subject_task;
-    subject_task_pub.publish(task_msg);
-
-    flag_msg.data = flag;
-    flagPub.publish(flag_msg);
-
-    // hand_cl_msg.closure.clear();
-    // hand_cl_msg.closure.push_back(hand_cl);
-    // pub_hand_cl.publish(hand_cl_msg);
-    
-    // Creating traj msg for hand controller
-    hand_cl_msg.points.clear();
-    hand_cl_msg.joint_names.clear();
-    hand_cl_msg.joint_names.push_back("right_hand_synergy_joint");
-
-    trajectory_msgs::JointTrajectoryPoint start_point;
-    start_point.time_from_start = ros::Duration(1.0/50.0);
-
-    start_point.positions.clear();
-    start_point.positions.push_back(hand_cl/19000);
-
-    // std::cout << "The hand cl is " << hand_cl/19000 << "." << std::endl;
-
-    hand_cl_msg.points.push_back(start_point);
-
-    // Publishing to hand controller
-    pub_hand_cl.publish(hand_cl_msg);
-        
-    flag_pressure_msg.data = flag_pressure;
-    pressure_feedback_pub.publish(flag_pressure_msg);
-    
-    k_stiff_msg.data = k_stiff;
-    arm_stiffness_pub.publish(k_stiff_msg);
-
-    pub_pos_desD_ee.publish(vel_des_msg);
-    pub_control_ee.publish(posa_control_msg);
-
-    // ROS_WARN_STREAM("Pose to publish \n" << posa_control_msg);
-    // int arc;
-    // std::cin >> arc;
-
-    exp_time = ros::Time::now();
-    time_exp_msg = exp_time;
-    time_exp_pub.publish(time_exp_msg);
-
-    if (exp_begin + exp_finish <= ros::Time::now()){
+      flag_msg.data = flag;
+      flagPub.publish(flag_msg);
 
       // hand_cl_msg.closure.clear();
-      // hand_cl_msg.closure.push_back(0.0);
+      // hand_cl_msg.closure.push_back(hand_cl);
       // pub_hand_cl.publish(hand_cl_msg);
-
+      
       // Creating traj msg for hand controller
       hand_cl_msg.points.clear();
       hand_cl_msg.joint_names.clear();
@@ -440,22 +411,65 @@ int main(int argc, char **argv)
       start_point.time_from_start = ros::Duration(1.0/50.0);
 
       start_point.positions.clear();
-      start_point.positions.push_back(0.0);
+      start_point.positions.push_back(hand_cl/19000);
+
+      // std::cout << "The hand cl is " << hand_cl/19000 << "." << std::endl;
 
       hand_cl_msg.points.push_back(start_point);
 
       // Publishing to hand controller
       pub_hand_cl.publish(hand_cl_msg);
 
-      ros::Duration(1).sleep();  // per dare tempo ai publisher di avviarsi
-      ros::shutdown();
+      flag_pressure_msg.data = flag_pressure;
+      pressure_feedback_pub.publish(flag_pressure_msg);
+      
+      k_stiff_msg.data = k_stiff;
+      arm_stiffness_pub.publish(k_stiff_msg);
+
+      pub_pos_desD_ee.publish(vel_des_msg);
+      pub_control_ee.publish(posa_control_msg);
+
+      // ROS_WARN_STREAM("Pose to publish \n" << posa_control_msg);
+      // int arc;
+      // std::cin >> arc;
+
+      exp_time = ros::Time::now();
+      time_exp_msg = exp_time;
+      time_exp_pub.publish(time_exp_msg);
+
+      if (exp_begin + exp_finish <= ros::Time::now()){
+
+        // hand_cl_msg.closure.clear();
+        // hand_cl_msg.closure.push_back(0.0);
+        // pub_hand_cl.publish(hand_cl_msg);
+
+        // Creating traj msg for hand controller
+        hand_cl_msg.points.clear();
+        hand_cl_msg.joint_names.clear();
+        hand_cl_msg.joint_names.push_back("right_hand_synergy_joint");
+
+        trajectory_msgs::JointTrajectoryPoint start_point;
+        start_point.time_from_start = ros::Duration(1.0/50.0);
+
+        start_point.positions.clear();
+        start_point.positions.push_back(0.0);
+
+        hand_cl_msg.points.push_back(start_point);
+
+        // Publishing to hand controller
+        pub_hand_cl.publish(hand_cl_msg);
+
+        ros::Duration(1).sleep();  // per dare tempo ai publisher di avviarsi
+        ros::shutdown();
+
+      }
 
     }
 
     ros::spinOnce();
     rate.sleep();
 
-    }
+  }
     
 
 }

@@ -42,6 +42,7 @@
 #include <tf_conversions/tf_kdl.h>
 
 #include <trajectory_msgs/JointTrajectory.h>
+#include <std_srvs/SetBool.h>
 #include <vector>
 #include <handshake_ekf/StateVec.h>
 //#include <filter/StateVec.h>
@@ -79,6 +80,7 @@ double zd_hat= 0;
 double z_des = z_measure;
 double zd_des = 0;
 int first_cy = 1;
+bool service_called = false;
 
 void stiff_desCallback(const std_msgs::Float64MultiArray& msg){
   Kr = msg.data[0];
@@ -115,6 +117,13 @@ void poseD_desCallback(const geometry_msgs::Twist& msg)
   zd_des = msg.linear.z;
 }
 
+bool run_handshake_ekf(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res){
+  // Setting the run bool
+  service_called = req.data;
+  res.success = true;
+  res.message = "Done!";
+  return true;
+}
 
 
 int main(int argc, char **argv){
@@ -142,6 +151,8 @@ int main(int argc, char **argv){
     ros::Subscriber sub_pos_des_ee = node.subscribe("/panda_arm/equilibrium_pose",1,&pose_desCallback);
     ros::Subscriber sub_posD_des_ee = node.subscribe("/handshake_EKF_desired_twist",1,&poseD_desCallback);
     ros::Subscriber sub_stiff_des_ee = node.subscribe("/panda_arm/desired_stiffness_matrix",1,&stiff_desCallback);
+
+    ros::ServiceServer run_client = node.advertiseService("call_handshake_ekf", run_handshake_ekf);
 
 
 	 // lwr_controllers::PoseRPY msg;
@@ -242,6 +253,7 @@ int main(int argc, char **argv){
     //cout << "pippo" << endl;
    while (ros::ok()){
      	        
+          if(service_called){
            // Estraggo componenti vettore di stato
 
            x1 = X[0];
@@ -320,6 +332,7 @@ int main(int argc, char **argv){
 
     pub_contr.publish(pos_hat_msg);
     pub_contrD.publish(posD_hat_msg);
+  }
     
 
      

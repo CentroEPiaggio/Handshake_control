@@ -10,6 +10,7 @@ add_definitions(-std=gnu++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
 controller_interface
+  std_srvs
   control_msgs
   geometry_msgs
   forward_command_controller
