@@ -1,6 +1,7 @@
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/Float64MultiArray.h"
+#include "std_msgs/Bool.h"
 #include "geometry_msgs/Twist.h"
 #include <fstream> 
 #include "ros/ros.h"
@@ -306,6 +307,7 @@ int main(int argc, char **argv)
     ros::Publisher subject_task_pub       = node.advertise<std_msgs::Int16>("handshake_subject_task",1);
     ros::Publisher control_ID_pub         = node.advertise<std_msgs::Int16>("handshake_control_ID",1);
     ros::Publisher time_exp_pub           = node.advertise<std_msgs::Int16>("handshake_exp_time",1);
+    ros::Publisher end_pub                = node.advertise<std_msgs::Bool>("handshake_ending",1);
 
     ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
     ros::topic::waitForMessage<geometry_msgs::Pose>("/handshake_EKF_controlled_pose", ros::Duration(5.0));
@@ -461,6 +463,11 @@ int main(int argc, char **argv)
 
         ros::Duration(1).sleep();  // per dare tempo ai publisher di avviarsi
         //ros::shutdown();
+
+        std_msgs::Bool end_msg; end_msg.data = true;
+        end_pub.publish(end_msg);
+
+
         service_called = false;
 
       }
