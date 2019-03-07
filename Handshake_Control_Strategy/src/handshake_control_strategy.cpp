@@ -41,6 +41,7 @@ double k_max        = 500.0;
 double k_min        = 100.0;
 double K_C          = 0.7;
 double K_P          = 1.5;
+double K_P_stiff    = 2;
 double hand_cl      = 0;
 double hand_cl_max  = 19000.0;
 double hand_max     = 0.75*hand_cl_max;
@@ -59,7 +60,7 @@ ros::Time exp_time;
 ros::Time feedback_activation;
 ros::Time exp_begin;
 ros::Duration pressure_latency(1.5);
-ros::Duration exp_finish(180);
+ros::Duration exp_finish(60);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 bool service_called = false;
@@ -170,7 +171,7 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
     // Variable arm stiffness controls, activates only if human handshake is present
     if ((control_type == 5 || control_type == 6) && (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th)){
      
-    k_stiff = k_min + (k_max-k_min)*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
+    k_stiff = k_min + K_P_stiff*(k_max-k_min)*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
     }
 
@@ -279,7 +280,7 @@ int main(int argc, char **argv)
     node.getParam("handshake_controller_type", control_type);
     std::cout << "Controller Type "<< control_type <<" Enabled" << std::endl;
 
-    ros::Rate rate(100);
+    ros::Rate rate(10);
     exp_begin = ros::Time::now();
 
     std_msgs::Float64MultiArray stiffMatrixCmdMsg;
