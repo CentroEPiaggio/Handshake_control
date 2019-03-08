@@ -188,7 +188,7 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
 
       hand_cl = K_C*hand_max + K_P*hand_cl_max*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
-      hand_cl = speedSaturation(hand_cl, hand_cl_old, cl_th);
+      //hand_cl = speedSaturation(hand_cl, hand_cl_old, cl_th);
       //hand_cl = lowPassAveraging(hand_cl);
 
       if (hand_cl > hand_max) {
