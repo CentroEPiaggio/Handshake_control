@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   std_srvs
   qb_interface
+  tf
 )
 
 ## System dependencies are found with CMake's conventions

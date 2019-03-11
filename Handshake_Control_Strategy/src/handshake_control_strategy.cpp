@@ -18,6 +18,7 @@
 #include <trajectory_msgs/JointTrajectory.h>
 #include <std_srvs/SetBool.h>
 #include <ros/console.h>
+#include <tf/transform_listener.h>
 
 
 using namespace std;
@@ -64,6 +65,7 @@ ros::Duration exp_finish(30);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 bool service_called = false;
+double current_z = 0.3;
 
 /*---------------------------------------------------------------------*
 * GET CHAR FROM KEYBOARD                                               *
@@ -238,6 +240,20 @@ void poseD_hatCallback(const geometry_msgs::Twist& msg)
 }
 
 bool run_handshake_control(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res){
+  // Setting the current ee z
+  tf::TransformListener tf_listener;
+  tf::StampedTransform ee_transform;
+
+	try {
+	  tf_listener.waitForTransform("/world", "/right_hand_ee_link", ros::Time(0), ros::Duration(10.0) );
+    tf_listener.lookupTransform("/world", "/right_hand_ee_link", ros::Time(0), ee_transform);
+	} catch (tf::TransformException ex){
+    	ROS_ERROR("%s",ex.what());
+    	ros::Duration(1.0).sleep();
+  }
+
+  current_z = ee_transform.getOrigin().getZ();
+
   // Setting the run bool
   service_called = req.data;
   exp_begin = ros::Time::now();     // Resetting time for timeout
@@ -355,7 +371,7 @@ int main(int argc, char **argv)
        else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0 || flag_pressure == 0)
        {
 
-         z_des_ctr = 0.3;    
+         z_des_ctr = current_z;    
          zd_des_ctr = 0; 
 
        }
