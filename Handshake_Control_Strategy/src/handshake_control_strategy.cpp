@@ -170,10 +170,17 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
       
     }
 
-    // Variable arm stiffness controls, activates only if human handshake is present
+    // Variable arm stiffness controls, activates only if human handshake is present (proportional)
     if ((control_type == 5 || control_type == 6) && (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th)){
      
     k_stiff = k_min + K_P_stiff*(k_max-k_min)*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
+
+    }
+
+    // Variable arm stiffness controls, activates only if human handshake is present (inversely proportional)
+    if ((control_type == 7 || control_type == 8) && (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th)){
+     
+    k_stiff = k_max - (k_max-k_min)*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
     }
 
@@ -282,7 +289,7 @@ int main(int argc, char **argv)
   double zd_des_ctr;
   char term;
 
-  while (!(control_type == 1 || control_type == 2 || control_type == 3 || control_type == 4 || control_type == 5 || control_type == 6)){
+  while (!(control_type == 1 || control_type == 2 || control_type == 3 || control_type == 4 || control_type == 5 || control_type == 6 || control_type == 7 || control_type == 8)){
 
     std::cout << "Invalid control strategy paramether, please digit from 1 to 6" << std::endl;
     std::cin >> digit;
@@ -361,14 +368,14 @@ int main(int argc, char **argv)
 
       // EKF feedback on ee z position
         
-        if ((control_type == 1 || control_type == 3 || control_type == 5) && flag == 1 && flag_pressure == 1){
+        if ((control_type == 1 || control_type == 3 || control_type == 5 || control_type == 7) && flag == 1 && flag_pressure == 1){
 
          z_des_ctr = pos_hat_z;
          zd_des_ctr = 0; 
 
        }
 
-       else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0 || flag_pressure == 0)
+       else if (control_type == 2 || control_type == 4 || control_type == 6 || control_type == 8 || flag == 0 || flag_pressure == 0)
        {
 
          z_des_ctr = current_z;    

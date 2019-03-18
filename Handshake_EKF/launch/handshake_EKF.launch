@@ -5,7 +5,7 @@
     <arg name="handshake_controller_enabled" default="true"/>
 <!--     <arg name="hand_controller_enabled" default="true"/>
  -->    <arg name="adc_board_enabled" default="true"/>
-    <arg name="handshake_controller_type" default="1"/>
+    <arg name="handshake_controller_type" default="8"/>
     <arg name="handshake_subject_ID" default="1"/>
     <arg name="handshake_subject_task" default="1"/>
 
@@ -17,7 +17,7 @@
 
     </group>
 
-    <!-- <node name="handshake_record" pkg="rosbag" type="record" args="-a -o /home/domenico/Desktop/subj_$(arg handshake_subject_ID)_iter_$(arg handshake_subject_task)" output="screen"/> -->
+    <!-- <node name="handshake_record" pkg="rosbag" type="record" args="/qb_class_imu/adc /qb_class/hand_current /qb_class/hand_measurement /panda_arm/desired_stiffness_matrix /panda_arm/equilibrium_pose /handshake_EKF_controlled_pose /handshake_EKF_state /handshake_control_ID /handshake_current_arm_stiffness /handshake_feedback_flag_activation /handshake_pressure_feedback_activation /handshake_subject_ID /handshake_subject_task -o /home/george/Desktop/subj_$(arg handshake_subject_ID)_iter_$(arg handshake_subject_task)" output="screen"/> -->
 
 
     <!-- <group if="$(arg hand_controller_enabled)">
