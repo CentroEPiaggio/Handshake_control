@@ -2,6 +2,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Bool.h"
+#include <std_msgs/Int32.h>
 #include "geometry_msgs/Twist.h"
 #include <fstream> 
 #include "ros/ros.h"
@@ -60,10 +61,10 @@ int flag_pressure = 0;
 ros::Time exp_time;
 ros::Time feedback_activation;
 ros::Time exp_begin;
-ros::Time ekf_conv_begin;
+ros::Time ekf_conv_start;
 ros::Duration pressure_latency(1.5);
 ros::Duration exp_finish(30);
-ros::Duration ekf_conv_finish(2);
+ros::Duration ekf_conv_end(2);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 bool service_called = false;
@@ -248,22 +249,22 @@ void poseD_hatCallback(const geometry_msgs::Twist& msg)
   posD_hat = msg.linear.z;
 }
 
-void control_typeCallback(const Int32::ConstPtr& requested_control)
+void control_typeCallback(const std_msgs::Int32::ConstPtr& requested_control)
 {
-  while(!(requested_control == 1 || requested_control == 2 || requested_control == 3 || requested_control == 4 || requested_control == 5 || requested_control == 6)){
+  // while(!(requested_control == 1 || requested_control == 2 || requested_control == 3 || requested_control == 4 || requested_control == 5 || requested_control == 6)){
 
-    std::cout << "Invalid control strategy paramether, please digit from 1 to 6" << std::endl;
-    std::cin >> digit;
-    if(scanf("%d%c", &digit, &term) != 2 || term != '\n'){
+  //   std::cout << "Invalid control strategy paramether, please digit from 1 to 6" << std::endl;
+  //   std::cin >> digit;
+  //   if(scanf("%d%c", &digit, &term) != 2 || term != '\n'){
 
-      return -1;
+  //     return -1;
 
-    }
+  //   }
     
-    requested_control = digit;
-  }
+  //   requested_control = digit;
+  // }
 
-  control_type = requested_control;
+  control_type = requested_control->data;
   std::cout << "Set new control strategy: " << control_type << std::endl;
 }
 
@@ -311,7 +312,7 @@ int main(int argc, char **argv)
   double zd_des_ctr;
   char term;
 
-  while (!(control_type == 1 || control_type == 2 || control_type == 3 || control_type == 4 || control_type == 5 || control_type == 6 || control_type == 7 || control_type == 8)){
+  while (!(control_type == 1 || control_type == 2 || control_type == 3 || control_type == 4 || control_type == 5 || control_type == 6)){
 
     std::cout << "Invalid control strategy paramether, please digit from 1 to 6" << std::endl;
     std::cin >> digit;
@@ -363,7 +364,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
     ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback);
 
-    ros::Subscriber sub_control_type    = node.subscribe("/handshake_control_type_topic",1,&control_typeCallback); 
+    ros::Subscriber sub_control_type    = node.subscribe("/handshake_control_type_topic",1, &control_typeCallback); 
  
     ros::ServiceServer run_client = node.advertiseService("call_handshake_control", run_handshake_control);
 
