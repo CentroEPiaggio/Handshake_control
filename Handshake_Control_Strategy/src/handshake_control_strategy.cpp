@@ -60,8 +60,10 @@ int flag_pressure = 0;
 ros::Time exp_time;
 ros::Time feedback_activation;
 ros::Time exp_begin;
+ros::Time ekf_conv_begin;
 ros::Duration pressure_latency(1.5);
 ros::Duration exp_finish(30);
+ros::Duration ekf_conv_finish(2);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 bool service_called = false;
@@ -156,19 +158,19 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
         pressure_sens_2 = max_adc;
     }
 
-    // Maximum constant arm stiffness controls
-    if (control_type == 1 || control_type == 2){
+    // // Maximum constant arm stiffness controls
+    // if (control_type == 1 || control_type == 2){
 
-      k_stiff = k_max;
+    //   k_stiff = k_max;
 
-    }
+    // }
 
-    // Minimum constant arm stiffness controls
-    if (control_type == 3 || control_type == 4){
+    // // Minimum constant arm stiffness controls
+    // if (control_type == 3 || control_type == 4){
 
-      k_stiff = k_min;
+    //   k_stiff = k_min;
       
-    }
+    // }
 
     // Variable arm stiffness controls, activates only if human handshake is present (proportional)
     if ((control_type == 5 || control_type == 6) && (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th)){
@@ -178,11 +180,11 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
     }
 
     // Variable arm stiffness controls, activates only if human handshake is present (inversely proportional)
-    if ((control_type == 7 || control_type == 8) && (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th)){
+    // if ((control_type == 7 || control_type == 8) && (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th)){
      
-    k_stiff = k_max - (k_max-k_min)*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
+    // k_stiff = k_max - (k_max-k_min)*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
-    }
+    // }
 
     // Handshake control
     if (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th) {
@@ -245,6 +247,26 @@ void poseD_hatCallback(const geometry_msgs::Twist& msg)
 {
   posD_hat = msg.linear.z;
 }
+
+void control_typeCallback(const Int32::ConstPtr& requested_control)
+{
+  while(!(requested_control == 1 || requested_control == 2 || requested_control == 3 || requested_control == 4 || requested_control == 5 || requested_control == 6)){
+
+    std::cout << "Invalid control strategy paramether, please digit from 1 to 6" << std::endl;
+    std::cin >> digit;
+    if(scanf("%d%c", &digit, &term) != 2 || term != '\n'){
+
+      return -1;
+
+    }
+    
+    requested_control = digit;
+  }
+
+  control_type = requested_control;
+  std::cout << "Set new control strategy: " << control_type << std::endl;
+}
+
 
 bool run_handshake_control(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res){
   // Setting the current ee z
@@ -339,8 +361,10 @@ int main(int argc, char **argv)
     ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
     ros::topic::waitForMessage<geometry_msgs::Pose>("/handshake_EKF_controlled_pose", ros::Duration(5.0));
     ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
-    ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback); 
+    ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback);
 
+    ros::Subscriber sub_control_type    = node.subscribe("/handshake_control_type_topic",1,&control_typeCallback); 
+ 
     ros::ServiceServer run_client = node.advertiseService("call_handshake_control", run_handshake_control);
 
     //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Arm_Stiffness_Callback);   
@@ -365,32 +389,55 @@ int main(int argc, char **argv)
           }
         }
 
+      // Constant Stiffness Modalities
+
+      // Maximum constant arm stiffness controls
+      if (control_type == 1 || control_type == 2){
+
+        k_stiff = k_max;
+
+      }
+
+      // Minimum constant arm stiffness controls
+      if (control_type == 3 || control_type == 4){
+
+        k_stiff = k_min;
+      
+      }
 
       // EKF feedback on ee z position
         
-        if ((control_type == 1 || control_type == 3 || control_type == 5 || control_type == 7) && flag == 1 && flag_pressure == 1){
+      if ((control_type == 1 || control_type == 3 || control_type == 5 || control_type == 7) && flag == 1 && flag_pressure == 1){
 
-         z_des_ctr = pos_hat_z;
-         zd_des_ctr = 0; 
+        std::cout << "Contact detected; starting wait time for filter convergence" << std::endl;
 
+        ekf_conv_start = ros::Time::now();
+
+
+        if (ekf_conv_start + ekf_conv_end <= ros::Time::now()){
+          
+          std::cout << "Contact detected; using filter feedback" << std::endl;
+
+          z_des_ctr = pos_hat_z;
+          
+          zd_des_ctr = 0; 
+        }
        }
 
-       else if (control_type == 2 || control_type == 4 || control_type == 6 || control_type == 8 || flag == 0 || flag_pressure == 0)
-       {
+      else if (control_type == 2 || control_type == 4 || control_type == 6 || control_type == 8 || flag == 0 || flag_pressure == 0){
 
-         z_des_ctr = current_z;    
-         zd_des_ctr = 0; 
+        z_des_ctr = current_z;    
+        zd_des_ctr = 0; 
 
-       }
+      }
 
-
-       vel_des_msg.linear.z = zd_des_ctr;
-
-       if (z_des_ctr < 0.1)
+      if (z_des_ctr < 0.1)
         z_des_ctr = 0.1;
 
       if (z_des_ctr > 0.9)
         z_des_ctr = 0.9;
+
+      vel_des_msg.linear.z = zd_des_ctr;
 
       //vel_des_msg.linear.z = EKF_feedback(control_type, );
 
