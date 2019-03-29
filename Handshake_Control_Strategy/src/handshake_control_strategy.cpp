@@ -249,9 +249,9 @@ void poseD_hatCallback(const geometry_msgs::Twist& msg)
   posD_hat = msg.linear.z;
 }
 
-void control_typeCallback(const std_msgs::Int32::ConstPtr& requested_control)
+void control_typeCallback(std_msgs::Int32 requested_control)
 {
-  // while(!(requested_control == 1 || requested_control == 2 || requested_control == 3 || requested_control == 4 || requested_control == 5 || requested_control == 6)){
+  if (requested_control.data == 1 || requested_control.data == 2 || requested_control.data == 3 || requested_control.data == 4 || requested_control.data == 5 || requested_control.data == 6){
 
   //   std::cout << "Invalid control strategy paramether, please digit from 1 to 6" << std::endl;
   //   std::cin >> digit;
@@ -264,8 +264,9 @@ void control_typeCallback(const std_msgs::Int32::ConstPtr& requested_control)
   //   requested_control = digit;
   // }
 
-  control_type = requested_control->data;
+  control_type = requested_control.data;
   std::cout << "Set new control strategy: " << control_type << std::endl;
+  }
 }
 
 
@@ -364,7 +365,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
     ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback);
 
-    ros::Subscriber sub_control_type    = node.subscribe("/handshake_control_type_topic",1, &control_typeCallback); 
+    ros::Subscriber sub_control_type = node.subscribe("/handshake_control_type_topic",1, &control_typeCallback); 
  
     ros::ServiceServer run_client = node.advertiseService("call_handshake_control", run_handshake_control);
 
@@ -408,7 +409,7 @@ int main(int argc, char **argv)
 
       // EKF feedback on ee z position
         
-      if ((control_type == 1 || control_type == 3 || control_type == 5 || control_type == 7) && flag == 1 && flag_pressure == 1){
+      if ((control_type == 1 || control_type == 3 || control_type == 5) && flag == 1 && flag_pressure == 1){
 
         std::cout << "Contact detected; starting wait time for filter convergence" << std::endl;
 
@@ -425,7 +426,7 @@ int main(int argc, char **argv)
         }
        }
 
-      else if (control_type == 2 || control_type == 4 || control_type == 6 || control_type == 8 || flag == 0 || flag_pressure == 0){
+      else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0 || flag_pressure == 0){
 
         z_des_ctr = current_z;    
         zd_des_ctr = 0; 
