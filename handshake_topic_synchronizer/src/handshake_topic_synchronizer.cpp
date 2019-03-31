@@ -227,12 +227,20 @@ private:
 int main(int argc, char **argv)
 {
   //Initiate ROS
-  ros::init(argc, argv, "subscribe_and_publish");
+  ros::init(argc, argv, "handshake_topic_synchronizer_node");
 
   //Create an object of class SubscribeAndPublish that will take care of everything
   SubscribeAndPublish SAPObject;
 
-  ros::spin();
+  //ros::spin();
+  ros::Rate rate(100);
+
+  while (ros::ok()){
+      //Spinning once to get messages from topics
+    ros::spinOnce();
+    rate.sleep();
+
+  }
 
   return 0;
 }
