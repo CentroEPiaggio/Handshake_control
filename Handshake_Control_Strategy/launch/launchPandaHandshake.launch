@@ -17,8 +17,8 @@
     <arg name="use_imu" default="false"/>
 
     <!-- Utilities -->
-	<arg name="use_other_utils" default="true"/>
     <arg name="environment_name" default="panda_soma"/>
+    <arg name="use_moveit" default="true"/>
 
     <!-- START LAUNCH -->
 
@@ -76,6 +76,17 @@
 
     </group>
 
+    <!-- Loading MoveIt interface -->
+	<group if="$(arg use_moveit)">
+		<include file="$(find panda_moveit_config)/launch/move_group.launch">
+            <arg name="allow_trajectory_execution" value="true"/>
+            <arg name="fake_execution" value="true"/>
+            <arg name="info" value="true"/>
+            <arg name="debug" value="false"/>
+            <arg name="load_gripper" value="$(arg load_gripper)"/>
+        </include>
+	</group>
+
     <rosparam command="load" file="$(find adaptive_grasp_controller)/configs/sh_kuka_controllers.yaml" />
     
     <!-- Hand namespace -->
@@ -107,10 +118,5 @@
             <include file="$(find qb_interface)/launch/qb_interface.launch"></include>
         </group>
     </group>
-
-    <group if="$(arg use_other_utils)">
-		<!-- Load finger_fk service node -->
-  		<node name="finger_forward_kinematics" pkg="finger_fk" type="finger_fk_main.py" output="screen"/>
-	</group>
 
 </launch>

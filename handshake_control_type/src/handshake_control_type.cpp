@@ -31,8 +31,8 @@ int main(int argc, char **argv){
 
   
   ros::NodeHandle n;
-  int digit, required_control;
-  char term;
+  char digit; 
+  int required_control;
 
   ros::Publisher control_type_pub = n.advertise<std_msgs::Int32>("handshake_control_type_topic", 1);
 
@@ -48,24 +48,13 @@ int main(int argc, char **argv){
 
     if (kbhit()){
       
-      (void)getch();
+      char digit = getch();
 
-      while (!(required_control == 1 || required_control == 2 || required_control == 3 || required_control == 4 || required_control == 5 || required_control == 6)){
+      if (digit == '1' || digit == '2' || digit == '3' || digit == '4' || digit == '5' || digit == '6'){
 
-      std::cout << "Invalid control strategy paramether, please digit from 1 to 6" << std::endl;
-      std::cin >> digit;
-      
-      if(scanf("%d%c", &digit, &term) != 2 || term != '\n'){
-
-        return -1;
-
-        }
-        
-      }
-
-      required_control = digit;
+      required_control = digit - '0';
       std::cout << "Controller Type "<< required_control <<" Enabled" << std::endl;
-
+      }
     }
 
     
