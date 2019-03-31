@@ -35,7 +35,7 @@ double pos_hat_z      = 0.5;
 double pos_hat_quat_x = 0;
 double pos_hat_quat_y = 0;
 double pos_hat_quat_z = 0;
-double pos_hat_quat_w = 1 ;
+double pos_hat_quat_w = 1;
 double posD_hat       = 0.0;
 
 double k_stiff      = 100.0;
@@ -43,21 +43,22 @@ double k_max        = 500.0;
 double k_min        = 100.0;
 double K_C          = 0.7;
 double K_P          = 1.5;
-double K_P_stiff    = 2;
+double K_P_stiff    = 1.2;
 double hand_cl      = 0;
 double hand_cl_max  = 19000.0;
-double hand_max     = 0.75*hand_cl_max;
+double hand_max     = 0.65*hand_cl_max;
 double cl_th        = 0.2*hand_cl_max;
 double max_adc      = 3000.0;
 
 double pressure_sens_1_old  = 0.0;
 double pressure_sens_2_old  = 0.0;
 double hand_cl_old          = 0.0;
-double pres_th              = 100.0;
+double pres_th              = 1000.0;
 
 int flag          = 1;
 int control_type  = 1;
 int flag_pressure = 0;
+int ekf_flag      = 0;
 ros::Time exp_time;
 ros::Time feedback_activation;
 ros::Time exp_begin;
@@ -107,16 +108,16 @@ double speedSaturation(double actual_value, double previous_value, double thresh
   if (abs(actual_value - previous_value) > threshold) {
 
     if (previous_value  > actual_value) {
-        actual_value = previous_value - threshold/2;
+        actual_value = previous_value - threshold/200;
     }
 
     if (previous_value  < actual_value) {
-        actual_value = previous_value + threshold;
+        actual_value = previous_value + threshold/200;
     }
 
   }
 
-  if (abs(actual_value - previous_value) < threshold/5) {
+  if (abs(actual_value - previous_value) < threshold/200) {
 
         actual_value = previous_value;
 
@@ -197,6 +198,12 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
       //   std::cout << "Handshake detected!" << std::endl;
 
       // }
+      // double F_int   = K_C*hand_max;
+      // double F_H     = K_P*hand_cl_max*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
+
+      // double F_R     = (F_int + F_H)/4.0;
+
+      // hand_cl = 0.02*pow(F_R,3) - 2.86*pow(F_R,2) + 157.2*F_R; 
 
       hand_cl = K_C*hand_max + K_P*hand_cl_max*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
@@ -409,35 +416,47 @@ int main(int argc, char **argv)
 
       // EKF feedback on ee z position
         
-      if ((control_type == 1 || control_type == 3 || control_type == 5) && flag == 1 && flag_pressure == 1){
+      if((control_type == 1 || control_type == 3 || control_type == 5) && flag == 1 && flag_pressure == 1){
 
-        std::cout << "Contact detected; starting wait time for filter convergence" << std::endl;
+        if(ekf_flag == 0){
 
-        ekf_conv_start = ros::Time::now();
+          //std::cout << "Contact detected; starting wait time for filter convergence" << std::endl;
 
+          ekf_conv_start = ros::Time::now();
 
-        if (ekf_conv_start + ekf_conv_end <= ros::Time::now()){
+          ekf_flag = 1;
+        }
+
+        if(ekf_flag == 1 && ekf_conv_start + ekf_conv_end <= ros::Time::now()){
           
-          std::cout << "Contact detected; using filter feedback" << std::endl;
+          //std::cout << "Contact detected; using filter feedback" << std::endl;
 
           z_des_ctr = pos_hat_z;
           
-          zd_des_ctr = 0; 
+          zd_des_ctr = 0;
+
+          //std::cout<< 2 << std::endl; 
+
         }
+
        }
 
-      else if (control_type == 2 || control_type == 4 || control_type == 6 || flag == 0 || flag_pressure == 0){
+      else if(control_type == 2 || control_type == 4 || control_type == 6 || flag == 0 || flag_pressure == 0){
 
         z_des_ctr = current_z;    
         zd_des_ctr = 0; 
 
       }
 
-      if (z_des_ctr < 0.1)
+      if(flag_pressure == 0) ekf_flag = 0;
+
+
+      if(z_des_ctr < 0.1)
         z_des_ctr = 0.1;
 
-      if (z_des_ctr > 0.9)
+      if(z_des_ctr > 0.9)
         z_des_ctr = 0.9;
+
 
       vel_des_msg.linear.z = zd_des_ctr;
 
@@ -510,10 +529,6 @@ int main(int argc, char **argv)
       // ROS_WARN_STREAM("Pose to publish \n" << posa_control_msg);
       // int arc;
       // std::cin >> arc;
-
-      exp_time = ros::Time::now();
-      time_exp_msg = exp_time;
-      time_exp_pub.publish(time_exp_msg);
 
       if (exp_begin + exp_finish <= ros::Time::now()){
 
