@@ -349,11 +349,13 @@ int main(int argc, char **argv)
     std_msgs::Int16 flag_pressure_msg;
     std_msgs::Int16 k_stiff_msg;
     //qb_interface::handRef hand_cl_msg;
+    qb_interface::adcSensorArray post_adc_msg;
     geometry_msgs::Twist vel_des_msg;
     geometry_msgs::PoseStamped posa_control_msg;
     ros::Time time_exp_msg;
 
-    ros::Publisher pub_control_ee         = node.advertise<geometry_msgs::PoseStamped>("/panda_arm/equilibrium_pose",1); // Aggiungere topic
+    ros::Publisher pub_post_adc_sensors   = node.advertise<qb_interface::adcSensorArray>("handshake_post_adc_sensors",1); 
+    ros::Publisher pub_control_ee         = node.advertise<geometry_msgs::PoseStamped>("/panda_arm/equilibrium_pose",1); 
     ros::Publisher stiffMatrixCmdPub      = node.advertise<std_msgs::Float64MultiArray>("/panda_arm/desired_stiffness_matrix",1);
     ros::Publisher flagPub                = node.advertise<std_msgs::Int16>("handshake_feedback_flag_activation",1);
     ros::Publisher pub_pos_desD_ee        = node.advertise<geometry_msgs::Twist>("/handshake_EKF_desired_twist",1);
@@ -365,6 +367,7 @@ int main(int argc, char **argv)
     ros::Publisher subject_task_pub       = node.advertise<std_msgs::Int16>("handshake_subject_task",1);
     ros::Publisher control_ID_pub         = node.advertise<std_msgs::Int16>("handshake_control_ID",1);
     ros::Publisher time_exp_pub           = node.advertise<std_msgs::Int16>("handshake_exp_time",1);
+    
     ros::ServiceClient end_pub            = node.serviceClient<std_srvs::SetBool>("handshake_ending");
 
     ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
@@ -451,11 +454,20 @@ int main(int argc, char **argv)
       if(flag_pressure == 0) ekf_flag = 0;
 
 
-      if(z_des_ctr < 0.1)
-        z_des_ctr = 0.1;
+      //Insert here the constraints on the z motion 
 
-      if(z_des_ctr > 0.9)
+      if(z_des_ctr < 0.1){
+
+        z_des_ctr = 0.1;
+        k_stiff   = 700;
+      }
+
+      if(z_des_ctr > 0.9){
+
         z_des_ctr = 0.9;
+        k_stiff   = 700;
+
+      }
 
 
       vel_des_msg.linear.z = zd_des_ctr;
@@ -525,6 +537,12 @@ int main(int argc, char **argv)
 
       pub_pos_desD_ee.publish(vel_des_msg);
       pub_control_ee.publish(posa_control_msg);
+
+      //post_adc_msg.m[0].adc_sensor_1.clear();
+      //post_adc_msg.m[0].adc_sensor_2.clear();
+      post_adc_msg.m[0].adc_sensor_1 = pressure_sens_1_old;
+      post_adc_msg.m[0].adc_sensor_2 = pressure_sens_2_old;
+      pub_post_adc_sensors.publish(post_adc_msg);
 
       // ROS_WARN_STREAM("Pose to publish \n" << posa_control_msg);
       // int arc;

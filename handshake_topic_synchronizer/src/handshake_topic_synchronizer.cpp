@@ -64,8 +64,9 @@ public:
    	sub_pressure_flag  				= node.subscribe("handshake_pressure_feedback_activation",1, &SubscribeAndPublish::p_flag_callback, this);
    	sub_arm_stiffness      			= node.subscribe("handshake_current_arm_stiffness",1, &SubscribeAndPublish::k_callback, this);
    	sub_ekf_pose   		 			= node.subscribe("/handshake_EKF_controlled_pose",1, &SubscribeAndPublish::ekf_pose_callback, this);
-   	sub_ekf_state   		 		= node.subscribe("/handshake_EKF_state",1, &SubscribeAndPublish::ekf_state_callback, this);
-   	sub_qb_adc    					= node.subscribe("/qb_class_imu/adc",1, &SubscribeAndPublish::adc_callback, this);
+   	sub_ekf_state   		 		= node.subscribe("/handshake_EKF_state",1, &SubscribeAndPublish::ekf_state_callback, this);   	
+    //sub_qb_adc              = node.subscribe("/qb_class_imu/adc",1, &SubscribeAndPublish::adc_callback, this);
+    sub_qb_adc    					= node.subscribe("handshake_post_adc_sensors",1, &SubscribeAndPublish::adc_callback, this);
   }
 
   // void callback(const SUBSCRIBED_MESSAGE_TYPE& input)
