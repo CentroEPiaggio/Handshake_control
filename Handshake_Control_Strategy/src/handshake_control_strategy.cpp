@@ -14,6 +14,7 @@
 #include <eigen3/Eigen/Eigen>
 #include "std_msgs/Int16.h"
 #include <qb_interface/adcSensorArray.h>
+#include <qb_interface/adcSensor.h>
 //#include <qb_interface/handRef.h>
 #include <stdlib.h>
 #include <trajectory_msgs/JointTrajectory.h>
@@ -43,15 +44,15 @@ double k_max        = 500.0;
 double k_min        = 100.0;
 double K_C          = 0.7;
 double K_P          = 1.5;
-double K_P_stiff    = 1.2;
+double K_P_stiff    = 1.75;
 double hand_cl      = 0;
 double hand_cl_max  = 19000.0;
 double hand_max     = 0.65*hand_cl_max;
 double cl_th        = 0.2*hand_cl_max;
 double max_adc      = 3000.0;
 
-double pressure_sens_1_old  = 0.0;
-double pressure_sens_2_old  = 0.0;
+int pressure_sens_1_old  = 0;
+int pressure_sens_2_old  = 0;
 double hand_cl_old          = 0.0;
 double pres_th              = 1000.0;
 
@@ -65,7 +66,7 @@ ros::Time exp_begin;
 ros::Time ekf_conv_start;
 ros::Duration pressure_latency(1.5);
 ros::Duration exp_finish(30);
-ros::Duration ekf_conv_end(2);
+ros::Duration ekf_conv_end(1);
 
 trajectory_msgs::JointTrajectory hand_cl_msg;
 bool service_called = false;
@@ -108,7 +109,7 @@ double speedSaturation(double actual_value, double previous_value, double thresh
   if (abs(actual_value - previous_value) > threshold) {
 
     if (previous_value  > actual_value) {
-        actual_value = previous_value - threshold/200;
+        actual_value = previous_value - threshold/50;
     }
 
     if (previous_value  < actual_value) {
@@ -175,7 +176,7 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
     // }
 
     // Variable arm stiffness controls, activates only if human handshake is present (proportional)
-    if ((control_type == 5 || control_type == 6) && (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th)){
+    if ((control_type == 5 || control_type == 6) && (pressure_sens_1 > pres_th && pressure_sens_2 > pres_th)){
      
     k_stiff = k_min + K_P_stiff*(k_max-k_min)*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
@@ -189,7 +190,7 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
     // }
 
     // Handshake control
-    if (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th) {
+    if (pressure_sens_1 > pres_th && pressure_sens_2 > pres_th) {
 
       // if (flag_pressure == 0){
 
@@ -198,17 +199,16 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
       //   std::cout << "Handshake detected!" << std::endl;
 
       // }
-      // double F_int   = K_C*hand_max;
-      // double F_H     = K_P*hand_cl_max*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
+      double F_int   = K_C*hand_max;
+      double F_H     = K_P*hand_cl_max*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
+      double F_R     = (F_int + F_H)/2.0;
 
-      // double F_R     = (F_int + F_H)/4.0;
-
-      // hand_cl = 0.02*pow(F_R,3) - 2.86*pow(F_R,2) + 157.2*F_R; 
-
+      //hand_cl = 0.02*pow(F_R,3) - 2.86*pow(F_R,2) + 157.2*F_R; 
       hand_cl = K_C*hand_max + K_P*hand_cl_max*(pressure_sens_1 + pressure_sens_2)/(2*max_adc);
 
+      //hand_cl = F_R;
+
       //hand_cl = speedSaturation(hand_cl, hand_cl_old, cl_th);
-      //hand_cl = lowPassAveraging(hand_cl);
 
       if (hand_cl > hand_max) {
         hand_cl = hand_max;
@@ -349,34 +349,35 @@ int main(int argc, char **argv)
     std_msgs::Int16 flag_pressure_msg;
     std_msgs::Int16 k_stiff_msg;
     //qb_interface::handRef hand_cl_msg;
-    qb_interface::adcSensorArray post_adc_msg;
+    qb_interface::adcSensorArray  post_adc_msg;
+    qb_interface::adcSensor       tmp_adc_msg;
     geometry_msgs::Twist vel_des_msg;
     geometry_msgs::PoseStamped posa_control_msg;
     ros::Time time_exp_msg;
 
-    ros::Publisher pub_post_adc_sensors   = node.advertise<qb_interface::adcSensorArray>("handshake_post_adc_sensors",1); 
+    //ros::Publisher pub_post_adc_sensors   = node.advertise<qb_interface::adcSensorArray>("/handshake_post_adc_sensors",1); 
+    ros::Publisher pub_post_adc_sensors   = node.advertise<qb_interface::adcSensor>("/handshake_post_adc_sensors",1); 
+
     ros::Publisher pub_control_ee         = node.advertise<geometry_msgs::PoseStamped>("/panda_arm/equilibrium_pose",1); 
     ros::Publisher stiffMatrixCmdPub      = node.advertise<std_msgs::Float64MultiArray>("/panda_arm/desired_stiffness_matrix",1);
-    ros::Publisher flagPub                = node.advertise<std_msgs::Int16>("handshake_feedback_flag_activation",1);
+    ros::Publisher flagPub                = node.advertise<std_msgs::Int16>("/handshake_feedback_flag_activation",1);
     ros::Publisher pub_pos_desD_ee        = node.advertise<geometry_msgs::Twist>("/handshake_EKF_desired_twist",1);
     //ros::Publisher pub_hand_cl            = node.advertise<qb_interface::handRef>("/qb_class/hand_ref",1);
     ros::Publisher pub_hand_cl            = node.advertise<trajectory_msgs::JointTrajectory>("/right_hand/joint_trajectory_controller/command",1);
-    ros::Publisher pressure_feedback_pub  = node.advertise<std_msgs::Int16>("handshake_pressure_feedback_activation",1);
-    ros::Publisher arm_stiffness_pub      = node.advertise<std_msgs::Int16>("handshake_current_arm_stiffness",1);
-    ros::Publisher subject_ID_pub         = node.advertise<std_msgs::Int16>("handshake_subject_ID",1);
-    ros::Publisher subject_task_pub       = node.advertise<std_msgs::Int16>("handshake_subject_task",1);
-    ros::Publisher control_ID_pub         = node.advertise<std_msgs::Int16>("handshake_control_ID",1);
-    ros::Publisher time_exp_pub           = node.advertise<std_msgs::Int16>("handshake_exp_time",1);
+    ros::Publisher pressure_feedback_pub  = node.advertise<std_msgs::Int16>("/handshake_pressure_feedback_activation",1);
+    ros::Publisher arm_stiffness_pub      = node.advertise<std_msgs::Int16>("/handshake_current_arm_stiffness",1);
+    ros::Publisher subject_ID_pub         = node.advertise<std_msgs::Int16>("/handshake_subject_ID",1);
+    ros::Publisher subject_task_pub       = node.advertise<std_msgs::Int16>("/handshake_subject_task",1);
+    ros::Publisher control_ID_pub         = node.advertise<std_msgs::Int16>("/handshake_control_ID",1);
+    ros::Publisher time_exp_pub           = node.advertise<std_msgs::Int16>("/handshake_exp_time",1);
     
-    ros::ServiceClient end_pub            = node.serviceClient<std_srvs::SetBool>("handshake_ending");
-
-    ros::Subscriber sub_pos_hat   = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
+    ros::Subscriber sub_posD_hat      = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
+    ros::Subscriber sub_qb_adc        = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback);
+    ros::Subscriber sub_control_type  = node.subscribe("/handshake_control_type_topic",1, &control_typeCallback); 
+    ros::Subscriber sub_pos_hat       = node.subscribe("/handshake_EKF_controlled_pose",1,&pose_hatCallback);
     ros::topic::waitForMessage<geometry_msgs::Pose>("/handshake_EKF_controlled_pose", ros::Duration(5.0));
-    ros::Subscriber sub_posD_hat  = node.subscribe("/handshake_controlled_twist",1,&poseD_hatCallback);
-    ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&qb_adcCallback);
-
-    ros::Subscriber sub_control_type = node.subscribe("/handshake_control_type_topic",1, &control_typeCallback); 
- 
+    
+    ros::ServiceClient end_pub    = node.serviceClient<std_srvs::SetBool>("handshake_ending");
     ros::ServiceServer run_client = node.advertiseService("call_handshake_control", run_handshake_control);
 
     //ros::Subscriber sub_qb_adc    = node.subscribe("/qb_class_imu/adc",1,&Arm_Stiffness_Callback);   
@@ -384,9 +385,7 @@ int main(int argc, char **argv)
     while (ros::ok()){
       //Spinning once to get messages from topics
       ros::spinOnce();
-
       if (service_called) { 
-       
          if (kbhit()){
           (void)getch();
 
@@ -504,7 +503,7 @@ int main(int argc, char **argv)
       task_msg.data = subject_task;
       subject_task_pub.publish(task_msg);
 
-      flag_msg.data = flag;
+      flag_msg.data = ekf_flag;
       flagPub.publish(flag_msg);
 
       // hand_cl_msg.closure.clear();
@@ -538,11 +537,21 @@ int main(int argc, char **argv)
       pub_pos_desD_ee.publish(vel_des_msg);
       pub_control_ee.publish(posa_control_msg);
 
-      //post_adc_msg.m[0].adc_sensor_1.clear();
-      //post_adc_msg.m[0].adc_sensor_2.clear();
-      post_adc_msg.m[0].adc_sensor_1 = pressure_sens_1_old;
-      post_adc_msg.m[0].adc_sensor_2 = pressure_sens_2_old;
-      pub_post_adc_sensors.publish(post_adc_msg);
+      //tmp_post_adc_msg.adc_sensor_1  = pressure_sens_1_old;
+      //tmp_post_adc_msg.adc_sensor_2  = pressure_sens_2_old;
+       
+      // adc.m.push_back(tmp_adc);
+      // post_adc_msg.m[0].adc_sensor_1.clear();
+      // post_adc_msg.m[0].adc_sensor_2.clear();
+      // post_adc_msg.m[0].adc_sensor_1 = pressure_sens_1_old;
+      // post_adc_msg.m[0].adc_sensor_2 = pressure_sens_2_old;
+      //post_adc_msg.m.push_back(tmp_post_adc_msg);
+      //pub_post_adc_sensors.publish(post_adc_msg);
+
+      tmp_adc_msg.adc_sensor_1 = pressure_sens_1_old;
+      tmp_adc_msg.adc_sensor_2 = pressure_sens_2_old;
+
+      pub_post_adc_sensors.publish(tmp_adc_msg);
 
       // ROS_WARN_STREAM("Pose to publish \n" << posa_control_msg);
       // int arc;

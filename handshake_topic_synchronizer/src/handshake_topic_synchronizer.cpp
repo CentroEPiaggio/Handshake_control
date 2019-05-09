@@ -19,6 +19,7 @@
 #include "geometry_msgs/Twist.h"
 #include "std_msgs/Int16.h"
 #include <qb_interface/adcSensorArray.h>
+#include <qb_interface/adcSensor.h>
 #include <qb_interface/handPos.h>
 #include <qb_interface/handRef.h>
 #include <qb_interface/handCurrent.h>
@@ -32,6 +33,7 @@
 #include <handshake_topic_synchronizer/handRefStamped.h>
 #include <handshake_topic_synchronizer/stateVecStamped.h>
 #include <handshake_topic_synchronizer/adcSensorArrayStamped.h>
+#include <handshake_topic_synchronizer/adcSensorStamped.h>
 
 #include <ros/ros.h>
 
@@ -51,22 +53,23 @@ public:
   	pub_st_arm_stiffness      			= node.advertise<handshake_topic_synchronizer::Int16Stamped>("/st_handshake_current_arm_stiffness",1);
   	pub_st_ekf_pose  		 			= node.advertise<handshake_topic_synchronizer::PoseStamped>("/st_handshake_EKF_controlled_pose",1);
   	pub_st_ekf_state  		 			= node.advertise<handshake_topic_synchronizer::stateVecStamped>("/st_handshake_EKF_state",1);
-  	pub_st_qb_adc    					= node.advertise<handshake_topic_synchronizer::adcSensorArrayStamped>("/st_qb_class_imu_adc",1);
+  	//pub_st_qb_adc    					= node.advertise<handshake_topic_synchronizer::adcSensorArrayStamped>("/st_qb_class_imu_adc",1);
+    pub_st_qb_adc             = node.advertise<handshake_topic_synchronizer::adcSensorStamped>("/st_qb_class_imu_adc",1);
 
 
     //Topic you want to subscribe
     sub_equilibrium_pose         	= node.subscribe("/panda_arm/equilibrium_pose",1, &SubscribeAndPublish::pose_callback, this);
    	sub_desired_stiffness_matrix	= node.subscribe("/panda_arm/desired_stiffness_matrix",1, &SubscribeAndPublish::K_callback, this);
-   	sub_feedback_flag             	= node.subscribe("handshake_feedback_flag_activation",1, &SubscribeAndPublish::f_flag_callback, this);
-   	sub_hand_measurement          	= node.subscribe("/qb_class/handPos",1, &SubscribeAndPublish::q_callback, this);
-   	sub_hand_current            	= node.subscribe("/qb_class/handCurrent",1, &SubscribeAndPublish::I_callback, this);
-   	sub_hand_ref            		= node.subscribe("/qb_class/handRef",1, &SubscribeAndPublish::ref_callback, this);
-   	sub_pressure_flag  				= node.subscribe("handshake_pressure_feedback_activation",1, &SubscribeAndPublish::p_flag_callback, this);
-   	sub_arm_stiffness      			= node.subscribe("handshake_current_arm_stiffness",1, &SubscribeAndPublish::k_callback, this);
+   	sub_feedback_flag             	= node.subscribe("/handshake_feedback_flag_activation",1, &SubscribeAndPublish::f_flag_callback, this);
+   	sub_hand_measurement          	= node.subscribe("/qb_class/hand_measurement",1, &SubscribeAndPublish::q_callback, this);
+   	sub_hand_current            	= node.subscribe("/qb_class/hand_current",1, &SubscribeAndPublish::I_callback, this);
+   	sub_hand_ref            		= node.subscribe("/qb_class/hand_ref",1, &SubscribeAndPublish::ref_callback, this);
+   	sub_pressure_flag  				= node.subscribe("/handshake_pressure_feedback_activation",1, &SubscribeAndPublish::p_flag_callback, this);
+   	sub_arm_stiffness      			= node.subscribe("/handshake_current_arm_stiffness",1, &SubscribeAndPublish::k_callback, this);
    	sub_ekf_pose   		 			= node.subscribe("/handshake_EKF_controlled_pose",1, &SubscribeAndPublish::ekf_pose_callback, this);
    	sub_ekf_state   		 		= node.subscribe("/handshake_EKF_state",1, &SubscribeAndPublish::ekf_state_callback, this);   	
     //sub_qb_adc              = node.subscribe("/qb_class_imu/adc",1, &SubscribeAndPublish::adc_callback, this);
-    sub_qb_adc    					= node.subscribe("handshake_post_adc_sensors",1, &SubscribeAndPublish::adc_callback, this);
+    sub_qb_adc    					= node.subscribe("/handshake_post_adc_sensors",1, &SubscribeAndPublish::adc_callback, this);
   }
 
   // void callback(const SUBSCRIBED_MESSAGE_TYPE& input)
@@ -76,13 +79,13 @@ public:
   //   pub_.publish(output);
   // }
 
-  void pose_callback(const geometry_msgs::Pose& pose_msg)
+  void pose_callback(const geometry_msgs::PoseStamped& pose_msg)
   {
     handshake_topic_synchronizer::PoseStamped st_pose_msg;
 
     st_pose_msg.header.stamp 	= ros::Time::now();
-    st_pose_msg.position 			= pose_msg.position;
-    st_pose_msg.orientation 		= pose_msg.orientation;
+    st_pose_msg.position 			= pose_msg.pose.position;
+    st_pose_msg.orientation 		= pose_msg.pose.orientation;
 
     pub_st_equilibrium_pose.publish(st_pose_msg);
   }
@@ -184,15 +187,35 @@ public:
     pub_st_ekf_state.publish(st_ekf_s_msg);
   }
 
-  void adc_callback(const qb_interface::adcSensorArray& adc_msg)
+
+  void adc_callback(const qb_interface::adcSensor& adc_msg)
+  //void adc_callback(const qb_interface::adcSensorArray& adc_msg)
   {
     handshake_topic_synchronizer::adcSensorArrayStamped st_adc_msg;
+    handshake_topic_synchronizer::adcSensorStamped tmp_adc_msg;
 
-    st_adc_msg.header.stamp 		= ros::Time::now();
-	st_adc_msg.m[0].adc_sensor_1	= adc_msg.m[0].adc_sensor_1;
-	st_adc_msg.m[0].adc_sensor_2	= adc_msg.m[0].adc_sensor_2;
+    //qb_interface::adcSensor tmp_adc_msg;
 
-    pub_st_qb_adc.publish(st_adc_msg);
+    st_adc_msg.header.stamp 		  = ros::Time::now();
+	  //st_adc_msg.m[0].adc_sensor_1	= adc_msg.m[0].adc_sensor_1;
+	  //st_adc_msg.m[0].adc_sensor_2	= adc_msg.m[0].adc_sensor_2;
+
+    //int tmp_pressure_sens_1 = adc_msg.m[0].adc_sensor_1;
+    //int tmp_pressure_sens_2 = adc_msg.m[0].adc_sensor_2;
+
+    int tmp_pressure_sens_1 = adc_msg.adc_sensor_1;
+    int tmp_pressure_sens_2 = adc_msg.adc_sensor_2;
+
+    tmp_adc_msg.header.stamp   = ros::Time::now();
+    tmp_adc_msg.adc_sensor_1  = tmp_pressure_sens_1;
+    tmp_adc_msg.adc_sensor_2  = tmp_pressure_sens_2;
+       
+    //st_adc_msg.m[0].adc_sensor_2.push_back(adc_msg.m[0].adc_sensor_2);
+    //st_adc_msg.m.push_back(tmp_adc_msg);
+
+    //pub_st_qb_adc.publish(st_adc_msg);
+    pub_st_qb_adc.publish(tmp_adc_msg);
+
   }
 
 
