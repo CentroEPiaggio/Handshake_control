@@ -5,8 +5,8 @@
     <arg name="handshake_controller_enabled" default="true"/>
 <!--     <arg name="hand_controller_enabled" default="true"/>
  -->    <arg name="adc_board_enabled" default="true"/>
-    <arg name="hs_control_type" default="1"/>
-    <arg name="hs_subj_ID" default="1"/>
+    <arg name="hs_control_type" default="5"/>
+    <arg name="hs_subj_ID" default="0"/>
     <arg name="hs_subj_task" default="1"/>
 
     <node name="handshake_EKF_node" pkg="handshake_ekf" type="handshake_EKF"  />
@@ -15,11 +15,11 @@
             
     <node name="handshake_control_strategy_node" pkg="handshake_control_strategy" type="handshake_control_strategy" args="$(arg hs_control_type) $(arg hs_subj_ID) $(arg hs_subj_task)" output="screen" required="true"/>
 
-    <node name="handshake_topic_synchronizer_node" pkg="handshake_topic_synchronizer" type="handshake_topic_synchronizer" output="screen"/>
+    <!-- <node name="handshake_topic_synchronizer_node" pkg="handshake_topic_synchronizer" type="handshake_topic_synchronizer" output="screen"/> -->
 
    <!--  <node name="handshake_record" pkg="rosbag" type="record" args="/qb_class_imu/adc /qb_class/hand_current /qb_class/hand_measurement /panda_arm/desired_stiffness_matrix /panda_arm/equilibrium_pose /handshake_EKF_controlled_pose /handshake_EKF_state /handshake_control_ID /handshake_current_arm_stiffness /handshake_feedback_flag_activation /handshake_pressure_feedback_activation /handshake_subject_ID /handshake_subject_task -o /home/franka/Desktop/subj_$(arg hs_subj_ID)_iter_$(arg hs_subj_task)" output="screen"/>  -->
 
-    <node name="handshake_record" pkg="rosbag" type="record" args="/st_qb_class_imu_adc /st_qb_class_handCurrent /st_qb_class_handPos /st_qb_class_handRef /st_panda_arm_desired_stiffness_matrix /st_panda_arm_equilibrium_pose /st_handshake_EKF_controlled_pose /st_handshake_EKF_state /handshake_control_ID /st_handshake_current_arm_stiffness /st_handshake_feedback_flag_activation /st_handshake_pressure_feedback_activation /handshake_subject_ID /handshake_subject_task -o /home/franka/Desktop/subj_$(arg hs_subj_ID)_iter_$(arg hs_subj_task)_st" output="screen"/> 
+    <!-- <node name="handshake_record" pkg="rosbag" type="record" args="/st_qb_class_imu_adc /st_qb_class_handCurrent /st_qb_class_handPos /st_qb_class_handRef /st_panda_arm_desired_stiffness_matrix /st_panda_arm_equilibrium_pose /st_handshake_EKF_controlled_pose /st_handshake_EKF_state /handshake_control_ID /st_handshake_current_arm_stiffness /st_handshake_feedback_flag_activation /st_handshake_pressure_feedback_activation /handshake_subject_ID /handshake_subject_task -o /home/franka/Desktop/subj_$(arg hs_subj_ID)_iter_$(arg hs_subj_task)_st" output="screen"/>  -->
 
     </group>
 

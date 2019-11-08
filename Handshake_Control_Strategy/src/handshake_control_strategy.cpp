@@ -54,7 +54,7 @@ double max_adc      = 3000.0;
 int pressure_sens_1_old  = 0;
 int pressure_sens_2_old  = 0;
 double hand_cl_old          = 0.0;
-double pres_th              = 1000.0;
+double pres_th              = 500.0;
 
 int flag          = 1;
 int control_type  = 1;
@@ -190,8 +190,8 @@ void qb_adcCallback(const qb_interface::adcSensorArrayConstPtr& pressure_msg){
     // }
 
     // Handshake control
-    if (pressure_sens_1 > pres_th && pressure_sens_2 > pres_th) {
-
+    //if (pressure_sens_1 > pres_th || pressure_sens_2 > pres_th) {
+    if (pressure_sens_1 > pres_th) {
       // if (flag_pressure == 0){
 
       flag_pressure = 1;
